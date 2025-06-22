@@ -1,21 +1,9 @@
 import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
+
+from LogManager import SetupLogging
 
 from ConfigManager import ConfigManager
 from DataDownloader import YFinanceDownloader
-
-
-def SetupLogging() -> None:
-    LogsDir = Path("Logs")
-    LogsDir.mkdir(exist_ok=True)
-    Handler = RotatingFileHandler(
-        LogsDir / "app.log",
-        maxBytes=1024 * 1024,
-        backupCount=3,
-    )
-    LoggingFormat = "%(asctime)s - %(levelname)s - %(message)s"
-    logging.basicConfig(level=logging.INFO, handlers=[Handler], format=LoggingFormat)
 
 
 def main() -> None:
