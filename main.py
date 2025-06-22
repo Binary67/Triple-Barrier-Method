@@ -23,13 +23,6 @@ def main() -> None:
     Data = Downloader.DownloadData()
     logging.info("Downloaded %d rows", len(Data))
 
-    Labeler = DataLabel(Params)
-    Data = Labeler.Apply("TripleBarrier", Data)
-    logging.info("Labels distribution: %s", Data["Label"].value_counts().to_dict())
-
-    Manager.SaveParams({"LastDownloadedRows": int(len(Data))})
-    logging.info("Updated parameters saved to Params.yaml")
-
 
 if __name__ == "__main__":
     main()
