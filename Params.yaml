@@ -2,4 +2,8 @@ EndDate: '2023-01-10'
 Interval: 1d
 LastDownloadedRows: 5
 StartDate: '2023-01-01'
+StopLossMultiplier: 1.0
+TakeProfitMultiplier: 1.0
 Ticker: AAPL
+VerticalBarrier: 5
+VolatilitySpan: 20

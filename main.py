@@ -4,6 +4,7 @@ from LogManager import SetupLogging
 
 from ConfigManager import ConfigManager
 from DataDownloader import YFinanceDownloader
+from DataLabel import DataLabel
 
 
 def main() -> None:
@@ -21,6 +22,10 @@ def main() -> None:
 
     Data = Downloader.DownloadData()
     logging.info("Downloaded %d rows", len(Data))
+
+    Labeler = DataLabel(Params)
+    Data = Labeler.Apply("TripleBarrier", Data)
+    logging.info("Applied labeling. Sample:\n%s", Data.head())
 
     Manager.SaveParams({"LastDownloadedRows": int(len(Data))})
     logging.info("Updated parameters saved to Params.yaml")
