@@ -1,7 +1,7 @@
-EndDate: '2023-01-10'
+EndDate: '2023-12-31'
 Interval: 1d
-LastDownloadedRows: 5
-StartDate: '2023-01-01'
+LastDownloadedRows: 1006
+StartDate: '2020-01-01'
 StopLossMultiplier: 1.0
 TakeProfitMultiplier: 1.0
 Ticker: AAPL

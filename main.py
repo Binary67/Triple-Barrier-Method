@@ -25,7 +25,7 @@ def main() -> None:
 
     Labeler = DataLabel(Params)
     Data = Labeler.Apply("TripleBarrier", Data)
-    logging.info("Applied labeling. Sample:\n%s", Data.head())
+    logging.info("Labels distribution: %s", Data["Label"].value_counts().to_dict())
 
     Manager.SaveParams({"LastDownloadedRows": int(len(Data))})
     logging.info("Updated parameters saved to Params.yaml")
