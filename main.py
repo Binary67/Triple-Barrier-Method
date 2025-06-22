@@ -1,7 +1,6 @@
 import logging
 
 from LogManager import SetupLogging
-
 from ConfigManager import ConfigManager
 from DataDownloader import YFinanceDownloader
 from DataLabel import DataLabel
@@ -22,6 +21,10 @@ def main() -> None:
 
     Data = Downloader.DownloadData()
     logging.info("Downloaded %d rows", len(Data))
+
+    Labeler = DataLabel(Params)
+    Labeled = Labeler.Apply("TripleBarrier", Data)
+    logging.info("Label counts: %s", Labeled["Label"].value_counts().to_dict())
 
 
 if __name__ == "__main__":

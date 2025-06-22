@@ -1,5 +1,7 @@
+Ticker: AAPL
+StartDate: '2020-01-01'
 EndDate: '2023-12-31'
 Interval: 1d
 LastDownloadedRows: 1006
-StartDate: '2020-01-01'
-Ticker: AAPL
+RiskPct: 5
+RiskRewardRatio: 2
