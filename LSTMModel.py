@@ -3,7 +3,8 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import f1_score
+import logging
+from sklearn.metrics import classification_report, f1_score
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
@@ -67,22 +68,25 @@ class LSTMModel:
         self.LearningRate = float(Params.get("LearningRate", 0.001))
         self.Epochs = int(Params.get("Epochs", 1))
         self.SequenceLength = int(Params.get("SequenceLength", 5))
-        self.HiddenSize = int(Params.get("HiddenSize", 50))
-        self.NumLayers = int(Params.get("NumLstmLayers", 1))
+        HiddenParam = Params.get("HiddenSize", 50)
+        if isinstance(HiddenParam, list):
+            self.HiddenSizes = [int(Size) for Size in HiddenParam]
+        else:
+            self.HiddenSizes = [int(HiddenParam)]
+        self.NumLayers = len(self.HiddenSizes)
         self.ModelPath = Params.get("ModelPath", "LSTMModel.pth")
         InputSize = len(self.Features)
-        self.Model = nn.LSTM(
-            input_size=InputSize,
-            hidden_size=self.HiddenSize,
-            num_layers=self.NumLayers,
-            batch_first=True,
-        )
-        self.Classifier = nn.Linear(self.HiddenSize, 3)
+        self.LstmLayers = nn.ModuleList()
+        for Idx, Size in enumerate(self.HiddenSizes):
+            InSize = InputSize if Idx == 0 else self.HiddenSizes[Idx - 1]
+            self.LstmLayers.append(
+                nn.LSTM(input_size=InSize, hidden_size=Size, batch_first=True)
+            )
+        self.Classifier = nn.Linear(self.HiddenSizes[-1], 3)
         self.Criterion = nn.CrossEntropyLoss()
-        self.Optimizer = torch.optim.Adam(
-            list(self.Model.parameters()) + list(self.Classifier.parameters()),
-            lr=self.LearningRate,
-        )
+        ParamsList = [P for L in self.LstmLayers for P in L.parameters()]
+        ParamsList += list(self.Classifier.parameters())
+        self.Optimizer = torch.optim.Adam(ParamsList, lr=self.LearningRate)
 
     def _TrainLoader(self) -> DataLoader:
         DatasetObj = SequenceDataset(
@@ -97,20 +101,39 @@ class LSTMModel:
 
     def Train(self) -> None:
         Loader = self._TrainLoader()
-        for _ in range(self.Epochs):
-            self.Model.train()
+        for EpochIdx in range(self.Epochs):
+            self.LstmLayers.train()
+            self.Classifier.train()
+            TotalLoss = 0.0
+            TotalCorrect = 0
+            TotalSamples = 0
             for XBatch, YBatch in Loader:
                 self.Optimizer.zero_grad()
-                Output, (Hidden, _) = self.Model(XBatch)
-                Logits = self.Classifier(Hidden[-1])
+                Output = XBatch
+                for Layer in self.LstmLayers:
+                    Output, (Hidden, _) = Layer(Output)
+                Logits = self.Classifier(Hidden.squeeze(0))
                 Loss = self.Criterion(Logits, YBatch)
                 Loss.backward()
                 self.Optimizer.step()
+                TotalLoss += Loss.item() * len(YBatch)
+                Preds = torch.argmax(Logits, dim=1)
+                TotalCorrect += (Preds == YBatch).sum().item()
+                TotalSamples += len(YBatch)
+            AvgLoss = TotalLoss / TotalSamples
+            Accuracy = TotalCorrect / TotalSamples
+            logging.info(
+                "Epoch %d/%d - Loss: %.4f - Accuracy: %.4f",
+                EpochIdx + 1,
+                self.Epochs,
+                AvgLoss,
+                Accuracy,
+            )
 
     def SaveModel(self, PathStr: str | None = None) -> None:
         PathStr = PathStr or self.ModelPath
         State = {
-            "Model": self.Model.state_dict(),
+            "LstmLayers": self.LstmLayers.state_dict(),
             "Classifier": self.Classifier.state_dict(),
         }
         torch.save(State, PathStr)
@@ -118,19 +141,23 @@ class LSTMModel:
     def LoadModel(self, PathStr: str | None = None) -> None:
         PathStr = PathStr or self.ModelPath
         State = torch.load(PathStr, map_location="cpu")
-        self.Model.load_state_dict(State["Model"])
+        self.LstmLayers.load_state_dict(State["LstmLayers"])
         self.Classifier.load_state_dict(State["Classifier"])
 
     def Evaluate(self) -> Tuple[float, pd.DataFrame]:
+        self.LoadModel()
         DatasetObj = self._ValDataset()
         Predictions: List[int] = []
         Labels: List[int] = []
         Idxs: List[Any] = DatasetObj.Indices
-        self.Model.eval()
+        self.LstmLayers.eval()
+        self.Classifier.eval()
         with torch.no_grad():
             for X, Y in DataLoader(DatasetObj, batch_size=self.BatchSize):
-                Output, (Hidden, _) = self.Model(X)
-                Logits = self.Classifier(Hidden[-1])
+                Output = X
+                for Layer in self.LstmLayers:
+                    Output, (Hidden, _) = Layer(Output)
+                Logits = self.Classifier(Hidden.squeeze(0))
                 PredTensor = torch.argmax(Logits, dim=1)
                 Predictions.extend(PredTensor.numpy().tolist())
                 Labels.extend(Y.numpy().tolist())
@@ -138,4 +165,20 @@ class LSTMModel:
         ValCopy = self.ValData.copy()
         for Idx, Pred in zip(Idxs, Predictions):
             ValCopy.loc[Idx, "Prediction"] = Pred - 1
+        if "Ticker" in ValCopy.columns:
+            ResultMap = {
+                Idx: (Pred, Label)
+                for Idx, Pred, Label in zip(Idxs, Predictions, Labels)
+            }
+            for Ticker, Group in ValCopy.groupby("Ticker"):
+                TrueLabels: List[int] = []
+                PredLabels: List[int] = []
+                for RowIdx in Group.index:
+                    if RowIdx in ResultMap:
+                        PredLab, Lab = ResultMap[RowIdx]
+                        PredLabels.append(PredLab)
+                        TrueLabels.append(Lab)
+                if TrueLabels:
+                    Report = classification_report(TrueLabels, PredLabels)
+                    logging.info("Classification report for %s:\n%s", Ticker, Report)
         return F1, ValCopy
