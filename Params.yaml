@@ -1,5 +1,7 @@
 Tickers:
   - AAPL
+  - MSFT
+  - GOOG
 StartDate: '2020-01-01'
 EndDate: '2023-12-31'
 Interval: 1d
