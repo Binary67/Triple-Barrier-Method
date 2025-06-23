@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
+
 if not hasattr(np, "NaN"):
-    # Older pandas_ta expects numpy.NaN which was removed in numpy>=2.0
+    # Older pandas_ta expected numpy.NaN. Assign for backward compatibility.
     np.NaN = np.nan  # type: ignore[attr-defined]
-import pandas_ta as ta
 from typing import Any, Callable, Dict, List
 
 
@@ -40,37 +40,78 @@ class TechnicalIndicator:
     def _AddEma(self) -> pd.DataFrame:
         Windows: List[int] = [int(W) for W in self.Params.get("EMAWindows", [])]
         for Window in Windows:
+            ColName = f"EMA_{Window}"
             if "Ticker" in self.Data.columns:
                 for _, Group in self.Data.groupby("Ticker"):
-                    Series = ta.ema(Group["Close"], length=Window)
-                    self.Data.loc[Group.index, Series.name] = Series
+                    Series = (
+                        Group["Close"].astype(float)
+                        .ewm(span=Window, adjust=False, min_periods=1)
+                        .mean()
+                    )
+                    Series.name = ColName
+                    self.Data.loc[Group.index, ColName] = Series
             else:
-                Series = ta.ema(self.Data["Close"], length=Window)
-                self.Data[Series.name] = Series
+                Series = (
+                    self.Data["Close"].astype(float)
+                    .ewm(span=Window, adjust=False, min_periods=1)
+                    .mean()
+                )
+                Series.name = ColName
+                self.Data[ColName] = Series
         return self.Data
 
     def _AddSma(self) -> pd.DataFrame:
         Windows: List[int] = [int(W) for W in self.Params.get("SMAWindows", [])]
         for Window in Windows:
+            ColName = f"SMA_{Window}"
             if "Ticker" in self.Data.columns:
                 for _, Group in self.Data.groupby("Ticker"):
-                    Series = ta.sma(Group["Close"], length=Window)
-                    self.Data.loc[Group.index, Series.name] = Series
+                    Series = (
+                        Group["Close"].astype(float)
+                        .rolling(window=Window, min_periods=1)
+                        .mean()
+                    )
+                    Series.name = ColName
+                    self.Data.loc[Group.index, ColName] = Series
             else:
-                Series = ta.sma(self.Data["Close"], length=Window)
-                self.Data[Series.name] = Series
+                Series = (
+                    self.Data["Close"].astype(float)
+                    .rolling(window=Window, min_periods=1)
+                    .mean()
+                )
+                Series.name = ColName
+                self.Data[ColName] = Series
         return self.Data
 
     def _AddRsi(self) -> pd.DataFrame:
         Windows: List[int] = [int(W) for W in self.Params.get("RSIWindows", [])]
         for Window in Windows:
+            ColName = f"RSI_{Window}"
             if "Ticker" in self.Data.columns:
                 for _, Group in self.Data.groupby("Ticker"):
-                    Series = ta.rsi(Group["Close"], length=Window)
-                    self.Data.loc[Group.index, Series.name] = Series
+                    Close = Group["Close"].astype(float)
+                    Delta = Close.diff().fillna(0.0)
+                    Gain = Delta.clip(lower=0)
+                    Loss = -Delta.clip(upper=0)
+                    AvgGain = Gain.ewm(alpha=1 / Window, adjust=False, min_periods=1).mean()
+                    AvgLoss = Loss.ewm(alpha=1 / Window, adjust=False, min_periods=1).mean()
+                    Rs = AvgGain / AvgLoss.replace(0, np.nan)
+                    Series = 100 - (100 / (1 + Rs))
+                    Series = Series.fillna(0.0)
+                    Series.name = ColName
+                    self.Data.loc[Group.index, ColName] = Series
             else:
-                Series = ta.rsi(self.Data["Close"], length=Window)
-                self.Data[Series.name] = Series
+                Close = self.Data["Close"].astype(float)
+                Delta = Close.diff().fillna(0.0)
+                Gain = Delta.clip(lower=0)
+                Loss = -Delta.clip(upper=0)
+                AvgGain = Gain.ewm(alpha=1 / Window, adjust=False, min_periods=1).mean()
+                AvgLoss = Loss.ewm(alpha=1 / Window, adjust=False, min_periods=1).mean()
+                Rs = AvgGain / AvgLoss.replace(0, np.nan)
+                Series = 100 - (100 / (1 + Rs))
+                Series = Series.fillna(0.0)
+                Series.name = ColName
+                self.Data[ColName] = Series
         return self.Data
 
     def _AddBb(self) -> pd.DataFrame:
@@ -78,15 +119,54 @@ class TechnicalIndicator:
         for Item in ParamsList:
             Window = int(Item.get("Window", 20))
             Std = float(Item.get("Std", 2))
+            Columns = {
+                "BBL": f"BBL_{Window}_{Std}",
+                "BBM": f"BBM_{Window}_{Std}",
+                "BBU": f"BBU_{Window}_{Std}",
+                "BBB": f"BBB_{Window}_{Std}",
+                "BBP": f"BBP_{Window}_{Std}",
+            }
             if "Ticker" in self.Data.columns:
                 for _, Group in self.Data.groupby("Ticker"):
-                    Bb = ta.bbands(Group["Close"], length=Window, std=Std)
-                    for Column in Bb.columns:
-                        self.Data.loc[Group.index, Column] = Bb[Column]
+                    Close = Group["Close"].astype(float)
+                    Middle = Close.rolling(window=Window, min_periods=1).mean()
+                    StdDev = Close.rolling(window=Window, min_periods=1).std(ddof=0)
+                    Lower = Middle - StdDev * Std
+                    Upper = Middle + StdDev * Std
+                    Bandwidth = (Upper - Lower) / Middle.replace(0, np.nan)
+                    Bandwidth = Bandwidth.replace([np.inf, -np.inf], 0.0).fillna(0.0)
+                    Percent = (Close - Lower) / (Upper - Lower)
+                    Percent = Percent.replace([np.inf, -np.inf], 0.0).fillna(0.0)
+                    DataDict = {
+                        Columns["BBL"]: Lower,
+                        Columns["BBM"]: Middle,
+                        Columns["BBU"]: Upper,
+                        Columns["BBB"]: Bandwidth,
+                        Columns["BBP"]: Percent,
+                    }
+                    for Col, Series in DataDict.items():
+                        Series.name = Col
+                        self.Data.loc[Group.index, Col] = Series
             else:
-                Bb = ta.bbands(self.Data["Close"], length=Window, std=Std)
-                for Column in Bb.columns:
-                    self.Data[Column] = Bb[Column]
+                Close = self.Data["Close"].astype(float)
+                Middle = Close.rolling(window=Window, min_periods=1).mean()
+                StdDev = Close.rolling(window=Window, min_periods=1).std(ddof=0)
+                Lower = Middle - StdDev * Std
+                Upper = Middle + StdDev * Std
+                Bandwidth = (Upper - Lower) / Middle.replace(0, np.nan)
+                Bandwidth = Bandwidth.replace([np.inf, -np.inf], 0.0).fillna(0.0)
+                Percent = (Close - Lower) / (Upper - Lower)
+                Percent = Percent.replace([np.inf, -np.inf], 0.0).fillna(0.0)
+                DataDict = {
+                    Columns["BBL"]: Lower,
+                    Columns["BBM"]: Middle,
+                    Columns["BBU"]: Upper,
+                    Columns["BBB"]: Bandwidth,
+                    Columns["BBP"]: Percent,
+                }
+                for Col, Series in DataDict.items():
+                    Series.name = Col
+                    self.Data[Col] = Series
         return self.Data
 
     def _AddMfi(self) -> pd.DataFrame:
@@ -106,9 +186,10 @@ class TechnicalIndicator:
                     RawMoneyFlow = TypicalPrice * Volume
                     PositiveFlow = RawMoneyFlow.where(TypicalPrice.diff() > 0, 0.0)
                     NegativeFlow = RawMoneyFlow.where(TypicalPrice.diff() < 0, 0.0)
-                    SumPos = PositiveFlow.rolling(window=Window).sum()
-                    SumNeg = NegativeFlow.rolling(window=Window).sum()
+                    SumPos = PositiveFlow.rolling(window=Window, min_periods=1).sum()
+                    SumNeg = NegativeFlow.rolling(window=Window, min_periods=1).sum()
                     Mfi = 100 * SumPos / (SumPos + SumNeg)
+                    Mfi = Mfi.fillna(0.0)
                     Mfi.name = f"MFI_{Window}"
                     self.Data.loc[Group.index, Mfi.name] = Mfi.astype(float)
             else:
@@ -120,9 +201,10 @@ class TechnicalIndicator:
                 RawMoneyFlow = TypicalPrice * Volume
                 PositiveFlow = RawMoneyFlow.where(TypicalPrice.diff() > 0, 0.0)
                 NegativeFlow = RawMoneyFlow.where(TypicalPrice.diff() < 0, 0.0)
-                SumPos = PositiveFlow.rolling(window=Window).sum()
-                SumNeg = NegativeFlow.rolling(window=Window).sum()
+                SumPos = PositiveFlow.rolling(window=Window, min_periods=1).sum()
+                SumNeg = NegativeFlow.rolling(window=Window, min_periods=1).sum()
                 Mfi = 100 * SumPos / (SumPos + SumNeg)
+                Mfi = Mfi.fillna(0.0)
                 Mfi.name = f"MFI_{Window}"
                 self.Data.loc[:, Mfi.name] = Mfi.astype(float)
         return self.Data
@@ -133,13 +215,28 @@ class TechnicalIndicator:
             Fast = int(Item.get("Fast", 12))
             Slow = int(Item.get("Slow", 26))
             Signal = int(Item.get("Signal", 9))
+            ColMacd = f"MACD_{Fast}_{Slow}_{Signal}"
+            ColHist = f"MACDh_{Fast}_{Slow}_{Signal}"
+            ColSignal = f"MACDs_{Fast}_{Slow}_{Signal}"
             if "Ticker" in self.Data.columns:
                 for _, Group in self.Data.groupby("Ticker"):
-                    MacdDf = ta.macd(Group["Close"], fast=Fast, slow=Slow, signal=Signal)
-                    for Column in MacdDf.columns:
-                        self.Data.loc[Group.index, Column] = MacdDf[Column]
+                    Close = Group["Close"].astype(float)
+                    EmaFast = Close.ewm(span=Fast, adjust=False, min_periods=1).mean()
+                    EmaSlow = Close.ewm(span=Slow, adjust=False, min_periods=1).mean()
+                    MacdLine = EmaFast - EmaSlow
+                    SignalLine = MacdLine.ewm(span=Signal, adjust=False, min_periods=1).mean()
+                    Hist = MacdLine - SignalLine
+                    self.Data.loc[Group.index, ColMacd] = MacdLine
+                    self.Data.loc[Group.index, ColHist] = Hist
+                    self.Data.loc[Group.index, ColSignal] = SignalLine
             else:
-                MacdDf = ta.macd(self.Data["Close"], fast=Fast, slow=Slow, signal=Signal)
-                for Column in MacdDf.columns:
-                    self.Data[Column] = MacdDf[Column]
+                Close = self.Data["Close"].astype(float)
+                EmaFast = Close.ewm(span=Fast, adjust=False, min_periods=1).mean()
+                EmaSlow = Close.ewm(span=Slow, adjust=False, min_periods=1).mean()
+                MacdLine = EmaFast - EmaSlow
+                SignalLine = MacdLine.ewm(span=Signal, adjust=False, min_periods=1).mean()
+                Hist = MacdLine - SignalLine
+                self.Data[ColMacd] = MacdLine
+                self.Data[ColHist] = Hist
+                self.Data[ColSignal] = SignalLine
         return self.Data
