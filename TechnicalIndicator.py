@@ -75,14 +75,19 @@ class TechnicalIndicator:
             Missing = Required.difference(self.Data.columns)
             raise ValueError(f"Missing columns required for MFI: {Missing}")
         for Window in Windows:
-            Series = ta.mfi(
-                high=self.Data["High"],
-                low=self.Data["Low"],
-                close=self.Data["Close"],
-                volume=self.Data["Volume"],
-                length=Window,
-            )
-            self.Data[Series.name] = Series
+            High = self.Data["High"].astype(float)
+            Low = self.Data["Low"].astype(float)
+            Close = self.Data["Close"].astype(float)
+            Volume = self.Data["Volume"].astype(float)
+            TypicalPrice = (High + Low + Close) / 3.0
+            RawMoneyFlow = TypicalPrice * Volume
+            PositiveFlow = RawMoneyFlow.where(TypicalPrice.diff() > 0, 0.0)
+            NegativeFlow = RawMoneyFlow.where(TypicalPrice.diff() < 0, 0.0)
+            SumPos = PositiveFlow.rolling(window=Window).sum()
+            SumNeg = NegativeFlow.rolling(window=Window).sum()
+            Mfi = 100 * SumPos / (SumPos + SumNeg)
+            Mfi.name = f"MFI_{Window}"
+            self.Data.loc[:, Mfi.name] = Mfi.astype(float)
         return self.Data
 
     def _AddMacd(self) -> pd.DataFrame:
