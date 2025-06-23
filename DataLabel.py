@@ -32,6 +32,20 @@ class DataLabel:
             Missing = Required.difference(Data.columns)
             raise ValueError(f"Missing columns required for labeling: {Missing}")
 
+        if "Ticker" in Data.columns:
+            Groups = []
+            for _, Group in Data.groupby("Ticker", group_keys=False):
+                Groups.append(
+                    self._TripleBarrierSingle(
+                        Group, RiskPct, RiskRewardRatio, TimeLimit
+                    )
+                )
+            return pd.concat(Groups).sort_index()
+        return self._TripleBarrierSingle(Data, RiskPct, RiskRewardRatio, TimeLimit)
+
+    def _TripleBarrierSingle(
+        self, Data: pd.DataFrame, RiskPct: float, RiskRewardRatio: float, TimeLimit: int
+    ) -> pd.DataFrame:
         Data = Data.copy()
         Labels = []
         for StartIdx in range(len(Data)):
@@ -47,7 +61,11 @@ class DataLabel:
             SlIdx = Slice.index[SlMask].min() if SlMask.any() else None
 
             if TpIdx is not None and SlIdx is not None:
-                Label = 1 if Slice.index.get_loc(TpIdx) <= Slice.index.get_loc(SlIdx) else -1
+                Label = (
+                    1
+                    if Slice.index.get_loc(TpIdx) <= Slice.index.get_loc(SlIdx)
+                    else -1
+                )
             elif TpIdx is not None:
                 Label = 1
             elif SlIdx is not None:
