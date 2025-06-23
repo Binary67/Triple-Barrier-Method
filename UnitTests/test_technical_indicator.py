@@ -38,3 +38,18 @@ def test_indicator_columns_exist() -> None:
         "BBL_3_2.0",
     }
     assert ExpectedCols.issubset(Result.columns)
+
+
+def test_mfi_nullable_int() -> None:
+    NullableData = pd.DataFrame(
+        {
+            "Close": pd.Series(range(1, 40), dtype="Int64"),
+            "High": pd.Series([x + 1 for x in range(1, 40)], dtype="Int64"),
+            "Low": pd.Series([x - 1 for x in range(1, 40)], dtype="Int64"),
+            "Volume": pd.Series(range(1, 40), dtype="Int64"),
+        }
+    )
+    Params = {"MFIWindows": [3]}
+    Indicator = TechnicalIndicator(NullableData, Params)
+    Result = Indicator.Apply("MFI")
+    assert Result["MFI_3"].dtype == float
