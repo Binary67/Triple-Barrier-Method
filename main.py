@@ -14,7 +14,7 @@ def main() -> None:
     logging.info("Loaded parameters: %s", Params)
 
     Downloader = YFinanceDownloader(
-        Params.get("Ticker", "AAPL"),
+        Params.get("Tickers", ["AAPL"]),
         Params.get("StartDate", "2023-01-01"),
         Params.get("EndDate", "2023-01-10"),
         Params.get("Interval", "1d"),
