@@ -16,7 +16,7 @@ def test_lstm_training_and_evaluation(caplog: Any) -> None:
     Data = pd.DataFrame(
         {
             "Feature": list(range(10)) + list(range(10, 20)),
-            "Label": [-1, -1, 0, 1, 1] * 4,
+            "Label": [0, 0, 1, 2, 2] * 4,
             "Ticker": ["AAA"] * 10 + ["BBB"] * 10,
         }
     )
@@ -45,6 +45,6 @@ def test_lstm_training_and_evaluation(caplog: Any) -> None:
     ]
     assert Reports
     for Text in Reports:
-        assert "-1" in Text
         assert " 0" in Text
         assert " 1" in Text
+        assert " 2" in Text

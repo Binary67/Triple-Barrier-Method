@@ -19,7 +19,7 @@ def test_triple_barrier_labels() -> None:
     )
     Labeler = DataLabel(Params)
     Labeled = Labeler.Apply("TripleBarrier", Data)
-    assert list(Labeled["Label"]) == [1, 0, 0, 0, 0]
+    assert list(Labeled["Label"]) == [2, 1, 1, 1, 1]
 
 
 def test_triple_barrier_multi_ticker() -> None:
@@ -36,5 +36,5 @@ def test_triple_barrier_multi_ticker() -> None:
     Labeled = Labeler.Apply("TripleBarrier", Data)
     FirstLabels = list(Labeled[Labeled["Ticker"] == "AAA"]["Label"])
     SecondLabels = list(Labeled[Labeled["Ticker"] == "BBB"]["Label"])
-    assert FirstLabels == [1, 0, 0, 0, 0]
-    assert SecondLabels == [1, 0, 0, 0, 0]
+    assert FirstLabels == [2, 1, 1, 1, 1]
+    assert SecondLabels == [2, 1, 1, 1, 1]
