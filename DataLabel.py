@@ -62,16 +62,16 @@ class DataLabel:
 
             if TpIdx is not None and SlIdx is not None:
                 Label = (
-                    1
+                    2
                     if Slice.index.get_loc(TpIdx) <= Slice.index.get_loc(SlIdx)
-                    else -1
+                    else 0
                 )
             elif TpIdx is not None:
-                Label = 1
+                Label = 2
             elif SlIdx is not None:
-                Label = -1
-            else:
                 Label = 0
+            else:
+                Label = 1
             Labels.append(Label)
         Data["Label"] = Labels
         return Data

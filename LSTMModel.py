@@ -44,7 +44,7 @@ class SequenceDataset(Dataset):
 
     def __getitem__(self, Index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         X = torch.tensor(self.Samples[Index], dtype=torch.float32)
-        Label = self.Labels[Index] + 1  # map -1,0,1 -> 0,1,2
+        Label = self.Labels[Index]
         Y = torch.tensor(Label, dtype=torch.long)
         return X, Y
 
@@ -164,7 +164,7 @@ class LSTMModel:
         F1 = f1_score(Labels, Predictions, average="weighted")
         ValCopy = self.ValData.copy()
         for Idx, Pred in zip(Idxs, Predictions):
-            ValCopy.loc[Idx, "Prediction"] = Pred - 1
+            ValCopy.loc[Idx, "Prediction"] = Pred
         if "Ticker" in ValCopy.columns:
             ResultMap = {
                 Idx: (Pred, Label)
@@ -179,9 +179,7 @@ class LSTMModel:
                         PredLabels.append(PredLab)
                         TrueLabels.append(Lab)
                 if TrueLabels:
-                    PredLabelsOrig = [p - 1 for p in PredLabels]
-                    TrueLabelsOrig = [t - 1 for t in TrueLabels]
-                    Report = classification_report(TrueLabelsOrig, PredLabelsOrig)
+                    Report = classification_report(TrueLabels, PredLabels)
                     logging.info(
                         "Classification report for %s:\n%s", Ticker, Report
                     )
