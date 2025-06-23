@@ -6,3 +6,11 @@ LastDownloadedRows: 1006
 RiskPct: 5
 RiskRewardRatio: 2
 TimeLimit: 5
+SMAWindows: [5, 20, 100]
+EMAWindows: [5, 20, 100]
+RSIWindows: [14]
+BBParams:
+  - {Window: 20, Std: 2}
+MFIWindows: [14]
+MACDParams:
+  - {Fast: 12, Slow: 26, Signal: 9}

@@ -4,6 +4,7 @@ from LogManager import SetupLogging
 from ConfigManager import ConfigManager
 from DataDownloader import YFinanceDownloader
 from DataLabel import DataLabel
+from TechnicalIndicator import TechnicalIndicator
 
 
 def main() -> None:
@@ -21,6 +22,10 @@ def main() -> None:
 
     Data = Downloader.DownloadData()
     logging.info("Downloaded %d rows", len(Data))
+
+    Indicators = TechnicalIndicator(Data, Params)
+    Data = Indicators.ApplyAll()
+    logging.info("Data Columns: %s", Data.columns.tolist())
 
     Labeler = DataLabel(Params)
     Labeled = Labeler.Apply("TripleBarrier", Data)
