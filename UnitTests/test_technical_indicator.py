@@ -11,10 +11,11 @@ from TechnicalIndicator import TechnicalIndicator
 def test_indicator_columns_exist() -> None:
     Data = pd.DataFrame(
         {
-            "Close": list(range(1, 40)),
-            "High": [x + 1 for x in range(1, 40)],
-            "Low": [x - 1 for x in range(1, 40)],
-            "Volume": list(range(1, 40)),
+            "Close": list(range(1, 41)),
+            "High": [x + 1 for x in range(1, 41)],
+            "Low": [x - 1 for x in range(1, 41)],
+            "Volume": list(range(1, 41)),
+            "Ticker": ["AAA"] * 20 + ["BBB"] * 20,
         }
     )
     Params = {
@@ -43,10 +44,11 @@ def test_indicator_columns_exist() -> None:
 def test_mfi_nullable_int() -> None:
     NullableData = pd.DataFrame(
         {
-            "Close": pd.Series(range(1, 40), dtype="Int64"),
-            "High": pd.Series([x + 1 for x in range(1, 40)], dtype="Int64"),
-            "Low": pd.Series([x - 1 for x in range(1, 40)], dtype="Int64"),
-            "Volume": pd.Series(range(1, 40), dtype="Int64"),
+            "Close": pd.Series(range(1, 41), dtype="Int64"),
+            "High": pd.Series([x + 1 for x in range(1, 41)], dtype="Int64"),
+            "Low": pd.Series([x - 1 for x in range(1, 41)], dtype="Int64"),
+            "Volume": pd.Series(range(1, 41), dtype="Int64"),
+            "Ticker": ["AAA"] * 20 + ["BBB"] * 20,
         }
     )
     Params = {"MFIWindows": [3]}
