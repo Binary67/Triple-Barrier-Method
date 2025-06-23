@@ -9,8 +9,8 @@ LastDownloadedRows: 1006
 RiskPct: 5
 RiskRewardRatio: 2
 TimeLimit: 5
-SMAWindows: [5, 20, 100]
-EMAWindows: [5, 20, 100]
+SMAWindows: [15, 50, 200]
+EMAWindows: [15, 50, 200]
 RSIWindows: [14]
 BBParams:
   - {Window: 20, Std: 2}
@@ -18,7 +18,10 @@ MFIWindows: [14]
 MACDParams:
   - {Fast: 12, Slow: 26, Signal: 9}
 LSTMParams:
-  Features: [Close]
+  Features: ['Close', 'High', 'Low', 'Open', 'Volume', 'MACD_12_26_9','MACDh_12_26_9', 
+             'MACDs_12_26_9', 'EMA_15', 'EMA_50', 'EMA_200',
+             'SMA_15', 'SMA_50', 'SMA_200', 'RSI_14', 'BBL_20_2.0', 'BBM_20_2.0',
+             'BBU_20_2.0', 'BBB_20_2.0', 'BBP_20_2.0', 'MFI_14']
   LabelColumn: Label
   SequenceLength: 5
   BatchSize: 8

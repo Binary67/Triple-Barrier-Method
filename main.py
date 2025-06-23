@@ -45,6 +45,8 @@ def main() -> None:
     F1, PredDf = Model.Evaluate()
     logging.info("Validation F1: %.4f", F1)
     Model.SaveModel(LstmParams.get("ModelPath"))
+    logging.info("IsNaN Counts: %s", PredDf["Prediction"].isna().sum())
+    logging.info("Prediction Value Counts: %s", PredDf["Prediction"].value_counts().to_dict())
 
 
 if __name__ == "__main__":
