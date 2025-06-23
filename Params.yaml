@@ -3,7 +3,7 @@ Tickers:
   - MSFT
   - GOOG
 StartDate: '2020-01-01'
-EndDate: '2023-12-31'
+EndDate: '2024-12-31'
 Interval: 1d
 LastDownloadedRows: 1006
 RiskPct: 5

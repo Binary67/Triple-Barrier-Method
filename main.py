@@ -6,6 +6,7 @@ from DataDownloader import YFinanceDownloader
 from DataLabel import DataLabel
 from TechnicalIndicator import TechnicalIndicator
 from LSTMModel import LSTMModel
+from DataSplitUtils import SplitByDate
 
 
 def main() -> None:
@@ -37,9 +38,14 @@ def main() -> None:
     LstmParams = Params.get("LSTMParams", {})
     Features = LstmParams.get("Features", ["Close"])
     LabelColumn = LstmParams.get("LabelColumn", "Label")
-    SplitIdx = int(len(Labeled) * 0.8)
-    TrainDf = Labeled.iloc[:SplitIdx]
-    ValDf = Labeled.iloc[SplitIdx:]
+
+    TrainDf, ValDf = SplitByDate(
+        Labeled,
+        "2020-01-01",
+        "2023-12-31",
+        "2024-01-01",
+        "2024-12-31",
+    )
     Model = LSTMModel(TrainDf, ValDf, Features, LabelColumn, LstmParams)
     Model.Train()
     F1, PredDf = Model.Evaluate()
