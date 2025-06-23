@@ -40,22 +40,37 @@ class TechnicalIndicator:
     def _AddEma(self) -> pd.DataFrame:
         Windows: List[int] = [int(W) for W in self.Params.get("EMAWindows", [])]
         for Window in Windows:
-            Series = ta.ema(self.Data["Close"], length=Window)
-            self.Data[Series.name] = Series
+            if "Ticker" in self.Data.columns:
+                for _, Group in self.Data.groupby("Ticker"):
+                    Series = ta.ema(Group["Close"], length=Window)
+                    self.Data.loc[Group.index, Series.name] = Series
+            else:
+                Series = ta.ema(self.Data["Close"], length=Window)
+                self.Data[Series.name] = Series
         return self.Data
 
     def _AddSma(self) -> pd.DataFrame:
         Windows: List[int] = [int(W) for W in self.Params.get("SMAWindows", [])]
         for Window in Windows:
-            Series = ta.sma(self.Data["Close"], length=Window)
-            self.Data[Series.name] = Series
+            if "Ticker" in self.Data.columns:
+                for _, Group in self.Data.groupby("Ticker"):
+                    Series = ta.sma(Group["Close"], length=Window)
+                    self.Data.loc[Group.index, Series.name] = Series
+            else:
+                Series = ta.sma(self.Data["Close"], length=Window)
+                self.Data[Series.name] = Series
         return self.Data
 
     def _AddRsi(self) -> pd.DataFrame:
         Windows: List[int] = [int(W) for W in self.Params.get("RSIWindows", [])]
         for Window in Windows:
-            Series = ta.rsi(self.Data["Close"], length=Window)
-            self.Data[Series.name] = Series
+            if "Ticker" in self.Data.columns:
+                for _, Group in self.Data.groupby("Ticker"):
+                    Series = ta.rsi(Group["Close"], length=Window)
+                    self.Data.loc[Group.index, Series.name] = Series
+            else:
+                Series = ta.rsi(self.Data["Close"], length=Window)
+                self.Data[Series.name] = Series
         return self.Data
 
     def _AddBb(self) -> pd.DataFrame:
@@ -63,9 +78,15 @@ class TechnicalIndicator:
         for Item in ParamsList:
             Window = int(Item.get("Window", 20))
             Std = float(Item.get("Std", 2))
-            Bb = ta.bbands(self.Data["Close"], length=Window, std=Std)
-            for Column in Bb.columns:
-                self.Data[Column] = Bb[Column]
+            if "Ticker" in self.Data.columns:
+                for _, Group in self.Data.groupby("Ticker"):
+                    Bb = ta.bbands(Group["Close"], length=Window, std=Std)
+                    for Column in Bb.columns:
+                        self.Data.loc[Group.index, Column] = Bb[Column]
+            else:
+                Bb = ta.bbands(self.Data["Close"], length=Window, std=Std)
+                for Column in Bb.columns:
+                    self.Data[Column] = Bb[Column]
         return self.Data
 
     def _AddMfi(self) -> pd.DataFrame:
@@ -75,19 +96,35 @@ class TechnicalIndicator:
             Missing = Required.difference(self.Data.columns)
             raise ValueError(f"Missing columns required for MFI: {Missing}")
         for Window in Windows:
-            High = self.Data["High"].astype(float)
-            Low = self.Data["Low"].astype(float)
-            Close = self.Data["Close"].astype(float)
-            Volume = self.Data["Volume"].astype(float)
-            TypicalPrice = (High + Low + Close) / 3.0
-            RawMoneyFlow = TypicalPrice * Volume
-            PositiveFlow = RawMoneyFlow.where(TypicalPrice.diff() > 0, 0.0)
-            NegativeFlow = RawMoneyFlow.where(TypicalPrice.diff() < 0, 0.0)
-            SumPos = PositiveFlow.rolling(window=Window).sum()
-            SumNeg = NegativeFlow.rolling(window=Window).sum()
-            Mfi = 100 * SumPos / (SumPos + SumNeg)
-            Mfi.name = f"MFI_{Window}"
-            self.Data.loc[:, Mfi.name] = Mfi.astype(float)
+            if "Ticker" in self.Data.columns:
+                for _, Group in self.Data.groupby("Ticker"):
+                    High = Group["High"].astype(float)
+                    Low = Group["Low"].astype(float)
+                    Close = Group["Close"].astype(float)
+                    Volume = Group["Volume"].astype(float)
+                    TypicalPrice = (High + Low + Close) / 3.0
+                    RawMoneyFlow = TypicalPrice * Volume
+                    PositiveFlow = RawMoneyFlow.where(TypicalPrice.diff() > 0, 0.0)
+                    NegativeFlow = RawMoneyFlow.where(TypicalPrice.diff() < 0, 0.0)
+                    SumPos = PositiveFlow.rolling(window=Window).sum()
+                    SumNeg = NegativeFlow.rolling(window=Window).sum()
+                    Mfi = 100 * SumPos / (SumPos + SumNeg)
+                    Mfi.name = f"MFI_{Window}"
+                    self.Data.loc[Group.index, Mfi.name] = Mfi.astype(float)
+            else:
+                High = self.Data["High"].astype(float)
+                Low = self.Data["Low"].astype(float)
+                Close = self.Data["Close"].astype(float)
+                Volume = self.Data["Volume"].astype(float)
+                TypicalPrice = (High + Low + Close) / 3.0
+                RawMoneyFlow = TypicalPrice * Volume
+                PositiveFlow = RawMoneyFlow.where(TypicalPrice.diff() > 0, 0.0)
+                NegativeFlow = RawMoneyFlow.where(TypicalPrice.diff() < 0, 0.0)
+                SumPos = PositiveFlow.rolling(window=Window).sum()
+                SumNeg = NegativeFlow.rolling(window=Window).sum()
+                Mfi = 100 * SumPos / (SumPos + SumNeg)
+                Mfi.name = f"MFI_{Window}"
+                self.Data.loc[:, Mfi.name] = Mfi.astype(float)
         return self.Data
 
     def _AddMacd(self) -> pd.DataFrame:
@@ -96,7 +133,13 @@ class TechnicalIndicator:
             Fast = int(Item.get("Fast", 12))
             Slow = int(Item.get("Slow", 26))
             Signal = int(Item.get("Signal", 9))
-            MacdDf = ta.macd(self.Data["Close"], fast=Fast, slow=Slow, signal=Signal)
-            for Column in MacdDf.columns:
-                self.Data[Column] = MacdDf[Column]
+            if "Ticker" in self.Data.columns:
+                for _, Group in self.Data.groupby("Ticker"):
+                    MacdDf = ta.macd(Group["Close"], fast=Fast, slow=Slow, signal=Signal)
+                    for Column in MacdDf.columns:
+                        self.Data.loc[Group.index, Column] = MacdDf[Column]
+            else:
+                MacdDf = ta.macd(self.Data["Close"], fast=Fast, slow=Slow, signal=Signal)
+                for Column in MacdDf.columns:
+                    self.Data[Column] = MacdDf[Column]
         return self.Data

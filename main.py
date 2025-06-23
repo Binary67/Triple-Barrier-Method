@@ -22,6 +22,8 @@ def main() -> None:
 
     Data = Downloader.DownloadData()
     logging.info("Downloaded %d rows", len(Data))
+    if "Ticker" in Data.columns:
+        logging.info("Tickers present: %s", Data["Ticker"].unique().tolist())
 
     Indicators = TechnicalIndicator(Data, Params)
     Data = Indicators.ApplyAll()
