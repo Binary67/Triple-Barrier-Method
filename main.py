@@ -5,6 +5,7 @@ from ConfigManager import ConfigManager
 from DataDownloader import YFinanceDownloader
 from DataLabel import DataLabel
 from TechnicalIndicator import TechnicalIndicator
+from LSTMModel import LSTMModel
 
 
 def main() -> None:
@@ -32,6 +33,18 @@ def main() -> None:
     Labeler = DataLabel(Params)
     Labeled = Labeler.Apply("TripleBarrier", Data)
     logging.info("Label counts: %s", Labeled["Label"].value_counts().to_dict())
+
+    LstmParams = Params.get("LSTMParams", {})
+    Features = LstmParams.get("Features", ["Close"])
+    LabelColumn = LstmParams.get("LabelColumn", "Label")
+    SplitIdx = int(len(Labeled) * 0.8)
+    TrainDf = Labeled.iloc[:SplitIdx]
+    ValDf = Labeled.iloc[SplitIdx:]
+    Model = LSTMModel(TrainDf, ValDf, Features, LabelColumn, LstmParams)
+    Model.Train()
+    F1, PredDf = Model.Evaluate()
+    logging.info("Validation F1: %.4f", F1)
+    Model.SaveModel(LstmParams.get("ModelPath"))
 
 
 if __name__ == "__main__":

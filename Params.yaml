@@ -17,3 +17,13 @@ BBParams:
 MFIWindows: [14]
 MACDParams:
   - {Fast: 12, Slow: 26, Signal: 9}
+LSTMParams:
+  Features: [Close]
+  LabelColumn: Label
+  SequenceLength: 5
+  BatchSize: 8
+  LearningRate: 0.001
+  Epochs: 1
+  HiddenSize: 16
+  NumLstmLayers: 1
+  ModelPath: LSTMModel.pth
