@@ -1,6 +1,8 @@
 from pathlib import Path
 import sys
 
+import os
+
 import pandas as pd
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -21,13 +23,15 @@ def test_lstm_training_and_evaluation() -> None:
         "LearningRate": 0.01,
         "Epochs": 1,
         "SequenceLength": 3,
-        "HiddenSize": 4,
-        "NumLstmLayers": 1,
+        "HiddenSize": [4],
+        "ModelPath": "TempModel.pth",
     }
     Train = Data.iloc[:12]
     Val = Data.iloc[12:]
     Model = LSTMModel(Train, Val, ["Feature"], "Label", Params)
     Model.Train()
+    Model.SaveModel()
     F1, PredDf = Model.Evaluate()
+    os.remove("TempModel.pth")
     assert "Prediction" in PredDf.columns
     assert isinstance(F1, float)

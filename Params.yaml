@@ -27,6 +27,5 @@ LSTMParams:
   BatchSize: 8
   LearningRate: 0.001
   Epochs: 1
-  HiddenSize: 16
-  NumLstmLayers: 1
+  HiddenSize: [16]
   ModelPath: LSTMModel.pth
