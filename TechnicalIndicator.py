@@ -12,6 +12,10 @@ class TechnicalIndicator:
 
     def __init__(self, Data: pd.DataFrame, Params: Dict[str, Any]) -> None:
         self.Data = Data.copy()
+        NumericCols = ["Open", "High", "Low", "Close", "Volume"]
+        for Column in NumericCols:
+            if Column in self.Data.columns:
+                self.Data[Column] = pd.to_numeric(self.Data[Column], errors="coerce").astype(float)
         self.Params = Params
         self.Methods: Dict[str, Callable[[], pd.DataFrame]] = {}
         self.RegisterIndicator("MACD", self._AddMacd)
@@ -75,14 +79,15 @@ class TechnicalIndicator:
             Missing = Required.difference(self.Data.columns)
             raise ValueError(f"Missing columns required for MFI: {Missing}")
         for Window in Windows:
-            Series = ta.mfi(
-                high=self.Data["High"],
-                low=self.Data["Low"],
-                close=self.Data["Close"],
-                volume=self.Data["Volume"],
-                length=Window,
-            )
-            self.Data[Series.name] = Series
+            TypicalPrice = (self.Data["High"] + self.Data["Low"] + self.Data["Close"]) / 3
+            RawMoneyFlow = TypicalPrice * self.Data["Volume"]
+            PositiveFlow = RawMoneyFlow.where(TypicalPrice.diff() > 0, 0.0)
+            NegativeFlow = RawMoneyFlow.where(TypicalPrice.diff() < 0, 0.0)
+            Psum = PositiveFlow.rolling(Window).sum()
+            Nsum = NegativeFlow.rolling(Window).sum()
+            Series = 100 * Psum / (Psum + Nsum)
+            Series.name = f"MFI_{Window}"
+            self.Data[Series.name] = Series.astype(float)
         return self.Data
 
     def _AddMacd(self) -> pd.DataFrame:

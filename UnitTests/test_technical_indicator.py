@@ -2,6 +2,7 @@ from pathlib import Path
 import sys
 
 import pandas as pd
+import warnings
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -38,3 +39,22 @@ def test_indicator_columns_exist() -> None:
         "BBL_3_2.0",
     }
     assert ExpectedCols.issubset(Result.columns)
+
+
+def test_mfi_no_dtype_warning() -> None:
+    Data = pd.DataFrame(
+        {
+            "Close": [1, 2, 3, 4, 5],
+            "High": [2, 3, 4, 5, 6],
+            "Low": [0, 1, 2, 3, 4],
+            "Volume": [100, 110, 120, 130, 140],
+        },
+        dtype="Int64",
+    )
+    Params = {"MFIWindows": [2]}
+    with warnings.catch_warnings(record=True) as WarnList:
+        warnings.simplefilter("error", FutureWarning)
+        Indicator = TechnicalIndicator(Data, Params)
+        Result = Indicator.Apply("MFI")
+    assert Result["MFI_2"].dtype == float
+    assert not WarnList
