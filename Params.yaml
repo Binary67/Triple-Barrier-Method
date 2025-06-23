@@ -5,3 +5,4 @@ Interval: 1d
 LastDownloadedRows: 1006
 RiskPct: 5
 RiskRewardRatio: 2
+TimeLimit: 5
