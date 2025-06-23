@@ -179,6 +179,10 @@ class LSTMModel:
                         PredLabels.append(PredLab)
                         TrueLabels.append(Lab)
                 if TrueLabels:
-                    Report = classification_report(TrueLabels, PredLabels)
-                    logging.info("Classification report for %s:\n%s", Ticker, Report)
+                    PredLabelsOrig = [p - 1 for p in PredLabels]
+                    TrueLabelsOrig = [t - 1 for t in TrueLabels]
+                    Report = classification_report(TrueLabelsOrig, PredLabelsOrig)
+                    logging.info(
+                        "Classification report for %s:\n%s", Ticker, Report
+                    )
         return F1, ValCopy
