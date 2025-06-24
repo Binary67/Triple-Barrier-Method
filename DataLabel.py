@@ -1,5 +1,6 @@
 from typing import Any, Callable, Dict
 
+import math
 import pandas as pd
 
 
@@ -26,6 +27,9 @@ class DataLabel:
         RiskPct = float(self.Params.get("RiskPct", 1)) / 100
         RiskRewardRatio = float(self.Params.get("RiskRewardRatio", 1))
         TimeLimit = int(self.Params.get("TimeLimit", 5))
+        AtrLookback = int(self.Params.get("ATRLookback", 14))
+        AtrMultiplier = float(self.Params.get("ATRMultiplier", 1.0))
+        Equity = float(self.Params.get("Equity", 10000))
 
         Required = {"High", "Low", "Close"}
         if not Required.issubset(Data.columns):
@@ -37,21 +41,58 @@ class DataLabel:
             for _, Group in Data.groupby("Ticker", group_keys=False):
                 Groups.append(
                     self._TripleBarrierSingle(
-                        Group, RiskPct, RiskRewardRatio, TimeLimit
+                        Group,
+                        RiskPct,
+                        RiskRewardRatio,
+                        TimeLimit,
+                        AtrLookback,
+                        AtrMultiplier,
+                        Equity,
                     )
                 )
             return pd.concat(Groups).sort_index()
-        return self._TripleBarrierSingle(Data, RiskPct, RiskRewardRatio, TimeLimit)
+        return self._TripleBarrierSingle(
+            Data,
+            RiskPct,
+            RiskRewardRatio,
+            TimeLimit,
+            AtrLookback,
+            AtrMultiplier,
+            Equity,
+        )
 
     def _TripleBarrierSingle(
-        self, Data: pd.DataFrame, RiskPct: float, RiskRewardRatio: float, TimeLimit: int
+        self,
+        Data: pd.DataFrame,
+        RiskPct: float,
+        RiskRewardRatio: float,
+        TimeLimit: int,
+        AtrLookback: int,
+        AtrMultiplier: float,
+        Equity: float,
     ) -> pd.DataFrame:
         Data = Data.copy()
+        HighLow = Data["High"] - Data["Low"]
+        HighClose = (Data["High"] - Data["Close"].shift()).abs()
+        LowClose = (Data["Low"] - Data["Close"].shift()).abs()
+        TrueRange = pd.concat([HighLow, HighClose, LowClose], axis=1).max(axis=1)
+        Data["ATR"] = TrueRange.rolling(window=AtrLookback, min_periods=1).mean()
+
         Labels = []
+        SharesList = []
         for StartIdx in range(len(Data)):
             Price = Data.at[Data.index[StartIdx], "Close"]
-            StopLoss = Price * (1 - RiskPct)
-            TakeProfit = Price * (1 + RiskPct * RiskRewardRatio)
+            AtrValue = Data.at[Data.index[StartIdx], "ATR"]
+            StopLoss = Price - AtrMultiplier * AtrValue
+            TakeProfit = Price + AtrMultiplier * AtrValue * RiskRewardRatio
+            RiskPerShare = Price - StopLoss
+            if RiskPerShare <= 0:
+                Shares = 0
+            else:
+                RiskBased = (Equity * RiskPct) / RiskPerShare
+                EquityBased = Equity / Price
+                Shares = math.floor(min(RiskBased, EquityBased))
+            SharesList.append(int(Shares))
             EndIdx = min(StartIdx + TimeLimit, len(Data) - 1)
             Slice = Data.iloc[StartIdx : EndIdx + 1]
 
@@ -74,4 +115,6 @@ class DataLabel:
                 Label = 1
             Labels.append(Label)
         Data["Label"] = Labels
+        Data["Shares"] = SharesList
+        Data = Data.drop(columns=["ATR"])
         return Data
