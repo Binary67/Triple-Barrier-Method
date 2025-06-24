@@ -92,3 +92,19 @@ def test_no_initial_nans() -> None:
         "MACDs_3_5_2",
     ]
     assert FirstRow[Columns].isna().sum() == 0
+
+
+def test_numeric_columns_cast_to_float() -> None:
+    Data = pd.DataFrame(
+        {
+            "Close": pd.Series([1, 2], dtype="Int64"),
+            "High": pd.Series([2, 3], dtype="Int64"),
+            "Low": pd.Series([0, 1], dtype="Int64"),
+            "Volume": pd.Series([10, 20], dtype="Int64"),
+        }
+    )
+    Params = {"EMAWindows": [2]}
+    Indicator = TechnicalIndicator(Data, Params)
+    Result = Indicator.Apply("EMA")
+    for Col in ["Close", "High", "Low", "Volume"]:
+        assert Result[Col].dtype == float
