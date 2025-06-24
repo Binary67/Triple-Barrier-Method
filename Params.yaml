@@ -32,3 +32,4 @@ LSTMParams:
   Epochs: 1
   HiddenSize: [16]
   ModelPath: LSTMModel.pth
+ScalerDictPath: ScalerDict.pkl

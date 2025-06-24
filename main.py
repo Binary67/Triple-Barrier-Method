@@ -7,6 +7,10 @@ from DataLabel import DataLabel
 from TechnicalIndicator import TechnicalIndicator
 from LSTMModel import LSTMModel
 from DataSplitUtils import SplitByDate
+import pickle
+from pathlib import Path
+from typing import Dict
+from sklearn.preprocessing import StandardScaler
 
 
 def main() -> None:
@@ -48,6 +52,17 @@ def main() -> None:
         "2024-01-01",
         "2024-12-31",
     )
+    ScalerPath = Path(Params.get("ScalerDictPath", "ScalerDict.pkl"))
+    Scalers: Dict[str, StandardScaler]
+    if ScalerPath.exists():
+        with ScalerPath.open("rb") as File:
+            Scalers = pickle.load(File)
+        TrainDf, _ = TechnicalIndicator.PerTickerZScore(TrainDf, Scalers)
+    else:
+        TrainDf, Scalers = TechnicalIndicator.PerTickerZScore(TrainDf)
+        with ScalerPath.open("wb") as File:
+            pickle.dump(Scalers, File)
+    ValDf, _ = TechnicalIndicator.PerTickerZScore(ValDf, Scalers)
     Model = LSTMModel(TrainDf, ValDf, Features, LabelColumn, LstmParams)
     Model.Train()
     Model.SaveModel(LstmParams.get("ModelPath"))
