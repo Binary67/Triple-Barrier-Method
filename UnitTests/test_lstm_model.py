@@ -44,11 +44,11 @@ def test_lstm_training_and_evaluation(caplog: Any) -> None:
         for Record in caplog.records
         if "Classification report" in Record.getMessage()
     ]
-    assert Reports
-    for Text in Reports:
-        assert " 0" in Text
-        assert " 1" in Text
-        assert " 2" in Text
+    assert len(Reports) == 1
+    Text = Reports[0]
+    assert " 0" in Text
+    assert " 1" in Text
+    assert " 2" in Text
 
 
 def test_classification_report_includes_all_labels(caplog: Any) -> None:
@@ -75,16 +75,16 @@ def test_classification_report_includes_all_labels(caplog: Any) -> None:
     caplog.set_level(logging.INFO)
     _, _ = Model.Evaluate()
     os.remove("TempModel.pth")
-    Reports = {
-        Record.getMessage().split("\n", 1)[0]: Record.getMessage()
+    Reports = [
+        Record.getMessage()
         for Record in caplog.records
         if "Classification report" in Record.getMessage()
-    }
-    assert any("AAA" in Key for Key in Reports)
-    for Text in Reports.values():
-        assert " 0" in Text
-        assert " 1" in Text
-        assert " 2" in Text
+    ]
+    assert len(Reports) == 1
+    Text = Reports[0]
+    assert " 0" in Text
+    assert " 1" in Text
+    assert " 2" in Text
 
 
 def test_model_device_selection() -> None:

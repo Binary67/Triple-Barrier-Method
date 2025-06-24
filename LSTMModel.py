@@ -186,6 +186,14 @@ class LSTMModel:
                 Predictions.extend(PredTensor.cpu().numpy().tolist())
                 Labels.extend(Y.cpu().numpy().tolist())
         F1 = f1_score(Labels, Predictions, average="weighted")
+        AllLabels = sorted(set(Labels) | set(Predictions))
+        Report = classification_report(
+            Labels,
+            Predictions,
+            labels=AllLabels,
+            zero_division=0,
+        )
+        logging.info("Classification report for all data:\n%s", Report)
         ValCopy = self.ValData.copy()
         if "Ticker" in ValCopy.columns:
             for Ticker, Idx, Pred in zip(Tickers, Idxs, Predictions):
@@ -194,33 +202,4 @@ class LSTMModel:
         else:
             for Idx, Pred in zip(Idxs, Predictions):
                 ValCopy.loc[Idx, "Prediction"] = Pred
-        if "Ticker" in ValCopy.columns:
-            ResultMap = {
-                (Ticker, Idx): (Pred, Label)
-                for Ticker, Idx, Pred, Label in zip(
-                    Tickers, Idxs, Predictions, Labels
-                )
-            }
-            AllLabels = sorted(
-                ValCopy[self.LabelColumn].dropna().astype(int).unique().tolist()
-            )
-            for Ticker, Group in ValCopy.groupby("Ticker"):
-                TrueLabels: List[int] = []
-                PredLabels: List[int] = []
-                for RowIdx in Group.index:
-                    Key = (Ticker, RowIdx)
-                    if Key in ResultMap:
-                        PredLab, Lab = ResultMap[Key]
-                        PredLabels.append(PredLab)
-                        TrueLabels.append(Lab)
-                if TrueLabels:
-                    Report = classification_report(
-                        TrueLabels,
-                        PredLabels,
-                        labels=AllLabels,
-                        zero_division=0,
-                    )
-                    logging.info(
-                        "Classification report for %s:\n%s", Ticker, Report
-                    )
         return F1, ValCopy
