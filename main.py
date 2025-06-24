@@ -35,6 +35,7 @@ def main() -> None:
     Labeler = DataLabel(Params)
     Labeled = Labeler.Apply("TripleBarrier", Data)
     logging.info("Label counts: %s", Labeled["Label"].value_counts().to_dict())
+    logging.info("Shares sample: %s", Labeled["Shares"].head().tolist())
 
     LstmParams = Params.get("LSTMParams", {})
     Features = LstmParams.get("Features", ["Close"])

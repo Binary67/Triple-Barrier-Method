@@ -9,6 +9,9 @@ LastDownloadedRows: 1006
 RiskPct: 5
 RiskRewardRatio: 2
 TimeLimit: 5
+ATRLookback: 14
+ATRMultiplier: 1.0
+Equity: 10000
 SMAWindows: [15, 50, 200]
 EMAWindows: [15, 50, 200]
 RSIWindows: [14]
