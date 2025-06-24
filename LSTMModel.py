@@ -21,14 +21,15 @@ class SequenceDataset(Dataset):
         self.Samples: List[np.ndarray] = []
         self.Labels: List[int] = []
         self.Indices: List[Any] = []
+        self.Tickers: List[Any] = []
         Clean = Data.dropna(subset=Features + [LabelColumn])
         if "Ticker" in Clean.columns:
-            for _, Group in Clean.groupby("Ticker"):
-                self._CreateSamples(Group)
+            for Ticker, Group in Clean.groupby("Ticker"):
+                self._CreateSamples(Group, Ticker)
         else:
-            self._CreateSamples(Clean)
+            self._CreateSamples(Clean, None)
 
-    def _CreateSamples(self, Data: pd.DataFrame) -> None:
+    def _CreateSamples(self, Data: pd.DataFrame, Ticker: Any | None) -> None:
         Data = Data.sort_index()
         Values = Data[self.Features].astype(float).values
         Labels = Data[self.LabelColumn].values
@@ -38,6 +39,7 @@ class SequenceDataset(Dataset):
             self.Samples.append(Values[Start:End])
             self.Labels.append(int(Labels[End - 1]))
             self.Indices.append(Idx[End - 1])
+            self.Tickers.append(Ticker)
 
     def __len__(self) -> int:
         return len(self.Samples)
@@ -150,6 +152,7 @@ class LSTMModel:
         Predictions: List[int] = []
         Labels: List[int] = []
         Idxs: List[Any] = DatasetObj.Indices
+        Tickers: List[Any] = DatasetObj.Tickers
         self.LstmLayers.eval()
         self.Classifier.eval()
         with torch.no_grad():
@@ -163,12 +166,19 @@ class LSTMModel:
                 Labels.extend(Y.numpy().tolist())
         F1 = f1_score(Labels, Predictions, average="weighted")
         ValCopy = self.ValData.copy()
-        for Idx, Pred in zip(Idxs, Predictions):
-            ValCopy.loc[Idx, "Prediction"] = Pred
+        if "Ticker" in ValCopy.columns:
+            for Ticker, Idx, Pred in zip(Tickers, Idxs, Predictions):
+                Mask = (ValCopy["Ticker"] == Ticker) & (ValCopy.index == Idx)
+                ValCopy.loc[Mask, "Prediction"] = Pred
+        else:
+            for Idx, Pred in zip(Idxs, Predictions):
+                ValCopy.loc[Idx, "Prediction"] = Pred
         if "Ticker" in ValCopy.columns:
             ResultMap = {
-                Idx: (Pred, Label)
-                for Idx, Pred, Label in zip(Idxs, Predictions, Labels)
+                (Ticker, Idx): (Pred, Label)
+                for Ticker, Idx, Pred, Label in zip(
+                    Tickers, Idxs, Predictions, Labels
+                )
             }
             AllLabels = sorted(
                 ValCopy[self.LabelColumn].dropna().astype(int).unique().tolist()
@@ -177,8 +187,9 @@ class LSTMModel:
                 TrueLabels: List[int] = []
                 PredLabels: List[int] = []
                 for RowIdx in Group.index:
-                    if RowIdx in ResultMap:
-                        PredLab, Lab = ResultMap[RowIdx]
+                    Key = (Ticker, RowIdx)
+                    if Key in ResultMap:
+                        PredLab, Lab = ResultMap[Key]
                         PredLabels.append(PredLab)
                         TrueLabels.append(Lab)
                 if TrueLabels:
