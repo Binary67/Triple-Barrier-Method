@@ -4,7 +4,8 @@ import pandas as pd
 if not hasattr(np, "NaN"):
     # Older pandas_ta expected numpy.NaN. Assign for backward compatibility.
     np.NaN = np.nan  # type: ignore[attr-defined]
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Tuple
+from sklearn.preprocessing import StandardScaler
 
 
 class TechnicalIndicator:
@@ -36,6 +37,41 @@ class TechnicalIndicator:
         for Name in self.Methods:
             self.Methods[Name]()
         return self.Data
+
+    @staticmethod
+    def PerTickerZScore(
+        Data: pd.DataFrame,
+        Scalers: Dict[str, StandardScaler] | None = None,
+        IgnoreCols: List[str] | None = None,
+    ) -> Tuple[pd.DataFrame, Dict[str, StandardScaler]]:
+        """Apply per-ticker z-score normalization to Data."""
+        Ignore = set(IgnoreCols or ["Ticker", "Label", "Shares"])
+        Columns = [Col for Col in Data.columns if Col not in Ignore]
+        Result = Data.copy()
+        Scalers = {} if Scalers is None else Scalers
+        if "Ticker" in Result.columns:
+            for Ticker, Group in Result.groupby("Ticker"):
+                Subset = Group[Columns].astype(float)
+                if Ticker not in Scalers:
+                    Scaler = StandardScaler()
+                    Transformed = Scaler.fit_transform(Subset)
+                    Scalers[Ticker] = Scaler
+                else:
+                    Scaler = Scalers[Ticker]
+                    Transformed = Scaler.transform(Subset)
+                Mask = (Result.index.isin(Group.index)) & (Result["Ticker"] == Ticker)
+                Result.loc[Mask, Columns] = Transformed
+        else:
+            Subset = Result[Columns].astype(float)
+            if "GLOBAL" not in Scalers:
+                Scaler = StandardScaler()
+                Transformed = Scaler.fit_transform(Subset)
+                Scalers["GLOBAL"] = Scaler
+            else:
+                Scaler = Scalers["GLOBAL"]
+                Transformed = Scaler.transform(Subset)
+            Result.loc[:, Columns] = Transformed
+        return Result, Scalers
 
     def _AddEma(self) -> pd.DataFrame:
         Windows: List[int] = [int(W) for W in self.Params.get("EMAWindows", [])]
