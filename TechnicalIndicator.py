@@ -12,6 +12,13 @@ class TechnicalIndicator:
 
     def __init__(self, Data: pd.DataFrame, Params: Dict[str, Any]) -> None:
         self.Data = Data.copy()
+        NumericCols = [
+            Col
+            for Col in ["Close", "High", "Low", "Open", "Volume"]
+            if Col in self.Data.columns
+        ]
+        if NumericCols:
+            self.Data[NumericCols] = self.Data[NumericCols].astype(float)
         self.Params = Params
         self.Methods: Dict[str, Callable[[], pd.DataFrame]] = {}
         self.RegisterIndicator("MACD", self._AddMacd)
