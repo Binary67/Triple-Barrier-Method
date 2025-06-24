@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 import pandas as pd
+import torch
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -84,3 +85,17 @@ def test_classification_report_includes_all_labels(caplog: Any) -> None:
         assert " 0" in Text
         assert " 1" in Text
         assert " 2" in Text
+
+
+def test_model_device_selection() -> None:
+    Data = pd.DataFrame({"Feature": [0, 1, 2, 3], "Label": [0, 1, 0, 1]})
+    Params = {
+        "BatchSize": 1,
+        "LearningRate": 0.01,
+        "Epochs": 1,
+        "SequenceLength": 2,
+        "HiddenSize": [2],
+    }
+    Model = LSTMModel(Data, Data, ["Feature"], "Label", Params)
+    Expected = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    assert Model.Device == Expected
