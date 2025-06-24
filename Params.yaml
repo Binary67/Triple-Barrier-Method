@@ -44,5 +44,6 @@ LSTMParams:
   LearningRate: 0.001
   Epochs: 1
   HiddenSize: [16]
+  DropoutRate: 0.1
   ModelPath: LSTMModel.pth
 ScalerDictPath: ScalerDict.pkl

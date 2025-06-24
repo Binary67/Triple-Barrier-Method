@@ -123,3 +123,18 @@ def test_class_weights_computation() -> None:
         [TotalSamples / (NumClasses * Count) for Count in Counts], dtype=torch.float32
     )
     assert torch.allclose(Model.ClassWeights.cpu(), ExpectedWeights)
+
+
+def test_dropout_parameter() -> None:
+    Data = pd.DataFrame({"Feature": [0, 1, 2, 3], "Label": [0, 1, 0, 1]})
+    Params = {
+        "BatchSize": 1,
+        "LearningRate": 0.01,
+        "Epochs": 1,
+        "SequenceLength": 2,
+        "HiddenSize": [2],
+        "DropoutRate": 0.5,
+    }
+    Model = LSTMModel(Data, Data, ["Feature"], "Label", Params)
+    assert isinstance(Model.Dropout, torch.nn.Dropout)
+    assert abs(Model.Dropout.p - 0.5) < 1e-6

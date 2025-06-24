@@ -44,6 +44,7 @@ def main() -> None:
     LstmParams = Params.get("LSTMParams", {})
     Features = LstmParams.get("Features", ["Close"])
     LabelColumn = LstmParams.get("LabelColumn", "Label")
+    logging.info("LSTM dropout rate: %s", LstmParams.get("DropoutRate", 0.0))
 
     TrainDf, ValDf = SplitByDate(
         Labeled,
