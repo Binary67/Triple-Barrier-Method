@@ -5,3 +5,5 @@ Logs/
 .idx
 .venv
 .vscode
+DataCache/
+*.pth

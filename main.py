@@ -20,6 +20,7 @@ def main() -> None:
         Params.get("StartDate", "2023-01-01"),
         Params.get("EndDate", "2023-01-10"),
         Params.get("Interval", "1d"),
+        Params.get("CacheDir", "DataCache"),
     )
 
     Data = Downloader.DownloadData()
