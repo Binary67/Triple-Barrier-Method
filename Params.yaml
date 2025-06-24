@@ -2,6 +2,15 @@ Tickers:
   - AAPL
   - MSFT
   - GOOG
+  - MMM
+  - AOS
+  - ABT
+  - ABBV
+  - ACN
+  - ADBE
+  - AMD
+  - AES
+  - AFL
 StartDate: '2020-01-01'
 EndDate: '2024-12-31'
 Interval: 1d
