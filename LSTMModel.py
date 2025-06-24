@@ -86,7 +86,13 @@ class LSTMModel:
                 nn.LSTM(input_size=InSize, hidden_size=Size, batch_first=True)
             )
         self.Classifier = nn.Linear(self.HiddenSizes[-1], 3)
-        self.Criterion = nn.CrossEntropyLoss()
+        Counts = self.TrainData[self.LabelColumn].value_counts().sort_index()
+        NumClasses = len(Counts)
+        TotalSamples = len(self.TrainData)
+        WeightsList = [TotalSamples / (NumClasses * Count) for Count in Counts]
+        WeightTensor = torch.tensor(WeightsList, dtype=torch.float32)
+        self.ClassWeights = WeightTensor.to(self.Device)
+        self.Criterion = nn.CrossEntropyLoss(weight=self.ClassWeights)
         ParamsList = [P for L in self.LstmLayers for P in L.parameters()]
         ParamsList += list(self.Classifier.parameters())
         self.Optimizer = torch.optim.Adam(ParamsList, lr=self.LearningRate)

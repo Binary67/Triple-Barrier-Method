@@ -99,3 +99,27 @@ def test_model_device_selection() -> None:
     Model = LSTMModel(Data, Data, ["Feature"], "Label", Params)
     Expected = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     assert Model.Device == Expected
+
+
+def test_class_weights_computation() -> None:
+    Data = pd.DataFrame(
+        {
+            "Feature": list(range(9)),
+            "Label": [0] * 4 + [1] * 3 + [2] * 2,
+        }
+    )
+    Params = {
+        "BatchSize": 1,
+        "LearningRate": 0.01,
+        "Epochs": 1,
+        "SequenceLength": 2,
+        "HiddenSize": [2],
+    }
+    Model = LSTMModel(Data, Data, ["Feature"], "Label", Params)
+    Counts = Data["Label"].value_counts().sort_index()
+    NumClasses = len(Counts)
+    TotalSamples = len(Data)
+    ExpectedWeights = torch.tensor(
+        [TotalSamples / (NumClasses * Count) for Count in Counts], dtype=torch.float32
+    )
+    assert torch.allclose(Model.ClassWeights.cpu(), ExpectedWeights)
