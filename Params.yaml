@@ -11,96 +11,10 @@ Tickers:
   - AMD
   - AES
   - AFL
-  - MSFT
   - NVDA
   - AMZN
   - META
   - AVGO
-  - TSLA
-  - BRK.B
-  - WMT
-  - JPM
-  - LLY
-  - V
-  - ORCL
-  - NFLX
-  - MA
-  - XOM
-  - COST
-  - PG
-  - JNJ
-  - HD
-  - BAC
-  - PLTR
-  - ABBV
-  - KO
-  - PM
-  - UNH
-  - CSCO
-  - GE
-  - IBM
-  - TMUS
-  - CVX
-  - CRM
-  - WFC
-  - ABT
-  - LIN
-  - MS
-  - INTU
-  - DIS
-  - AMD
-  - AXP
-  - MCD
-  - NOW
-  - T
-  - MRK
-  - RTX
-  - GS
-  - ACN
-  - FAST
-  - LHX
-  - GM
-  - URI
-  - CPRT
-  - SLB
-  - FICO
-  - KDP
-  - CCI
-  - GLW
-  - TTWO
-  - EW
-  - TGT
-  - EXC
-  - HES
-  - CMI
-  - OXY
-  - KMB
-  - VRSK
-  - MSCI
-  - VLO
-  - F
-  - IDXX
-  - FIS
-  - ROST
-  - PEG
-  - FANG
-  - KVUE
-  - AME
-  - CBRE
-  - DHI
-  - YUM
-  - XEL
-  - CAH
-  - GRMN
-  - EA
-  - OTIS
-  - CTSH
-  - BKR
-  - PRU
-  - RMD
-  - MCHP
-  - SYY
-  - ROK
 StartDate: '2020-01-01'
 EndDate: '2024-12-31'
 Interval: 1d
@@ -128,7 +42,7 @@ LSTMParams:
   SequenceLength: 5
   BatchSize: 4
   LearningRate: 0.001
-  Epochs: 200
-  HiddenSize: [16, 32, 16]
+  Epochs: 1
+  HiddenSize: [16]
   ModelPath: LSTMModel.pth
 ScalerDictPath: ScalerDict.pkl
