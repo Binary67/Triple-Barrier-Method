@@ -77,6 +77,7 @@ class LSTMModel:
             self.HiddenSizes = [int(HiddenParam)]
         self.NumLayers = len(self.HiddenSizes)
         self.ModelPath = Params.get("ModelPath", "LSTMModel.pth")
+        self.Device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         InputSize = len(self.Features)
         self.LstmLayers = nn.ModuleList()
         for Idx, Size in enumerate(self.HiddenSizes):
@@ -89,6 +90,9 @@ class LSTMModel:
         ParamsList = [P for L in self.LstmLayers for P in L.parameters()]
         ParamsList += list(self.Classifier.parameters())
         self.Optimizer = torch.optim.Adam(ParamsList, lr=self.LearningRate)
+        self.LstmLayers.to(self.Device)
+        self.Classifier.to(self.Device)
+        self.Criterion.to(self.Device)
 
     def _TrainLoader(self) -> DataLoader:
         DatasetObj = SequenceDataset(
@@ -110,6 +114,8 @@ class LSTMModel:
             TotalCorrect = 0
             TotalSamples = 0
             for XBatch, YBatch in Loader:
+                XBatch = XBatch.to(self.Device)
+                YBatch = YBatch.to(self.Device)
                 self.Optimizer.zero_grad()
                 Output = XBatch
                 for Layer in self.LstmLayers:
@@ -142,9 +148,11 @@ class LSTMModel:
 
     def LoadModel(self, PathStr: str | None = None) -> None:
         PathStr = PathStr or self.ModelPath
-        State = torch.load(PathStr, map_location="cpu")
+        State = torch.load(PathStr, map_location=self.Device)
         self.LstmLayers.load_state_dict(State["LstmLayers"])
         self.Classifier.load_state_dict(State["Classifier"])
+        self.LstmLayers.to(self.Device)
+        self.Classifier.to(self.Device)
 
     def Evaluate(self) -> Tuple[float, pd.DataFrame]:
         self.LoadModel()
@@ -157,13 +165,15 @@ class LSTMModel:
         self.Classifier.eval()
         with torch.no_grad():
             for X, Y in DataLoader(DatasetObj, batch_size=self.BatchSize):
+                X = X.to(self.Device)
+                Y = Y.to(self.Device)
                 Output = X
                 for Layer in self.LstmLayers:
                     Output, (Hidden, _) = Layer(Output)
                 Logits = self.Classifier(Hidden.squeeze(0))
                 PredTensor = torch.argmax(Logits, dim=1)
-                Predictions.extend(PredTensor.numpy().tolist())
-                Labels.extend(Y.numpy().tolist())
+                Predictions.extend(PredTensor.cpu().numpy().tolist())
+                Labels.extend(Y.cpu().numpy().tolist())
         F1 = f1_score(Labels, Predictions, average="weighted")
         ValCopy = self.ValData.copy()
         if "Ticker" in ValCopy.columns:

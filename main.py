@@ -64,6 +64,7 @@ def main() -> None:
             pickle.dump(Scalers, File)
     ValDf, _ = TechnicalIndicator.PerTickerZScore(ValDf, Scalers)
     Model = LSTMModel(TrainDf, ValDf, Features, LabelColumn, LstmParams)
+    logging.info("Using device: %s", Model.Device)
     Model.Train()
     Model.SaveModel(LstmParams.get("ModelPath"))
     F1, PredDf = Model.Evaluate()
