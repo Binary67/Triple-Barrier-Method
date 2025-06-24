@@ -48,3 +48,39 @@ def test_lstm_training_and_evaluation(caplog: Any) -> None:
         assert " 0" in Text
         assert " 1" in Text
         assert " 2" in Text
+
+
+def test_classification_report_includes_all_labels(caplog: Any) -> None:
+    Data = pd.DataFrame(
+        {
+            "Feature": list(range(12)),
+            "Label": [0, 0, 1, 1, 1, 1, 0, 1, 2, 2, 2, 2],
+            "Ticker": ["AAA"] * 6 + ["BBB"] * 6,
+        }
+    )
+    Params = {
+        "BatchSize": 2,
+        "LearningRate": 0.01,
+        "Epochs": 1,
+        "SequenceLength": 2,
+        "HiddenSize": [4],
+        "ModelPath": "TempModel.pth",
+    }
+    Train = Data.iloc[[0, 1, 2, 3, 6, 7, 8, 9]]
+    Val = Data.drop(Train.index)
+    Model = LSTMModel(Train, Val, ["Feature"], "Label", Params)
+    Model.Train()
+    Model.SaveModel()
+    caplog.set_level(logging.INFO)
+    _, _ = Model.Evaluate()
+    os.remove("TempModel.pth")
+    Reports = {
+        Record.getMessage().split("\n", 1)[0]: Record.getMessage()
+        for Record in caplog.records
+        if "Classification report" in Record.getMessage()
+    }
+    assert any("AAA" in Key for Key in Reports)
+    for Text in Reports.values():
+        assert " 0" in Text
+        assert " 1" in Text
+        assert " 2" in Text

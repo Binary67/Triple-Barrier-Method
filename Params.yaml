@@ -24,7 +24,7 @@ LSTMParams:
              'BBU_20_2.0', 'BBB_20_2.0', 'BBP_20_2.0', 'MFI_14']
   LabelColumn: Label
   SequenceLength: 5
-  BatchSize: 8
+  BatchSize: 4
   LearningRate: 0.001
   Epochs: 1
   HiddenSize: [16]

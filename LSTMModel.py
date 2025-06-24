@@ -92,7 +92,7 @@ class LSTMModel:
         DatasetObj = SequenceDataset(
             self.TrainData, self.Features, self.LabelColumn, self.SequenceLength
         )
-        return DataLoader(DatasetObj, batch_size=self.BatchSize, shuffle=True)
+        return DataLoader(DatasetObj, batch_size=self.BatchSize, shuffle=False)
 
     def _ValDataset(self) -> SequenceDataset:
         return SequenceDataset(
@@ -170,6 +170,9 @@ class LSTMModel:
                 Idx: (Pred, Label)
                 for Idx, Pred, Label in zip(Idxs, Predictions, Labels)
             }
+            AllLabels = sorted(
+                ValCopy[self.LabelColumn].dropna().astype(int).unique().tolist()
+            )
             for Ticker, Group in ValCopy.groupby("Ticker"):
                 TrueLabels: List[int] = []
                 PredLabels: List[int] = []
@@ -179,7 +182,12 @@ class LSTMModel:
                         PredLabels.append(PredLab)
                         TrueLabels.append(Lab)
                 if TrueLabels:
-                    Report = classification_report(TrueLabels, PredLabels)
+                    Report = classification_report(
+                        TrueLabels,
+                        PredLabels,
+                        labels=AllLabels,
+                        zero_division=0,
+                    )
                     logging.info(
                         "Classification report for %s:\n%s", Ticker, Report
                     )
