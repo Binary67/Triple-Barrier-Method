@@ -70,6 +70,7 @@ class LSTMModel:
         self.LearningRate = float(Params.get("LearningRate", 0.001))
         self.Epochs = int(Params.get("Epochs", 1))
         self.SequenceLength = int(Params.get("SequenceLength", 5))
+        self.DropoutRate = float(Params.get("DropoutRate", 0.0))
         HiddenParam = Params.get("HiddenSize", 50)
         if isinstance(HiddenParam, list):
             self.HiddenSizes = [int(Size) for Size in HiddenParam]
@@ -78,6 +79,7 @@ class LSTMModel:
         self.NumLayers = len(self.HiddenSizes)
         self.ModelPath = Params.get("ModelPath", "LSTMModel.pth")
         self.Device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.Dropout = nn.Dropout(self.DropoutRate)
         InputSize = len(self.Features)
         self.LstmLayers = nn.ModuleList()
         for Idx, Size in enumerate(self.HiddenSizes):
@@ -99,6 +101,7 @@ class LSTMModel:
         self.LstmLayers.to(self.Device)
         self.Classifier.to(self.Device)
         self.Criterion.to(self.Device)
+        self.Dropout.to(self.Device)
 
     def _TrainLoader(self) -> DataLoader:
         DatasetObj = SequenceDataset(
@@ -126,7 +129,8 @@ class LSTMModel:
                 Output = XBatch
                 for Layer in self.LstmLayers:
                     Output, (Hidden, _) = Layer(Output)
-                Logits = self.Classifier(Hidden.squeeze(0))
+                    Output = self.Dropout(Output)
+                Logits = self.Classifier(self.Dropout(Hidden.squeeze(0)))
                 Loss = self.Criterion(Logits, YBatch)
                 Loss.backward()
                 self.Optimizer.step()
@@ -176,7 +180,8 @@ class LSTMModel:
                 Output = X
                 for Layer in self.LstmLayers:
                     Output, (Hidden, _) = Layer(Output)
-                Logits = self.Classifier(Hidden.squeeze(0))
+                    Output = self.Dropout(Output)
+                Logits = self.Classifier(self.Dropout(Hidden.squeeze(0)))
                 PredTensor = torch.argmax(Logits, dim=1)
                 Predictions.extend(PredTensor.cpu().numpy().tolist())
                 Labels.extend(Y.cpu().numpy().tolist())
