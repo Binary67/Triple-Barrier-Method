@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import warnings
 
 import pandas as pd
 
@@ -92,3 +93,12 @@ def test_no_initial_nans() -> None:
         "MACDs_3_5_2",
     ]
     assert FirstRow[Columns].isna().sum() == 0
+
+
+def test_no_future_warning_existing_column() -> None:
+    Data = pd.DataFrame({"Close": list(range(1, 6))})
+    Data["SMA_3"] = 0
+    Indicator = TechnicalIndicator(Data, {"SMAWindows": [3]})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        Indicator.Apply("SMA")
