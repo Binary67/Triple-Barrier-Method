@@ -6,6 +6,7 @@ import torch
 import logging
 from sklearn.metrics import classification_report, f1_score
 from torch import nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -51,6 +52,20 @@ class SequenceDataset(Dataset):
         return X, Y
 
 
+class FocalLoss(nn.Module):
+    """Compute focal loss for multi-class classification."""
+
+    def __init__(self, Alpha: torch.Tensor | None = None, Gamma: float = 2.0) -> None:
+        super().__init__()
+        self.Alpha = Alpha
+        self.Gamma = Gamma
+
+    def forward(self, Inputs: torch.Tensor, Targets: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
+        CeLoss = F.cross_entropy(Inputs, Targets, weight=self.Alpha, reduction="none")
+        Pt = torch.exp(-CeLoss)
+        Focal = (1 - Pt) ** self.Gamma * CeLoss
+        return Focal.mean()
+
 class LSTMModel:
     """LSTM model wrapper for training and evaluation."""
 
@@ -94,7 +109,12 @@ class LSTMModel:
         WeightsList = [TotalSamples / (NumClasses * Count) for Count in Counts]
         WeightTensor = torch.tensor(WeightsList, dtype=torch.float32)
         self.ClassWeights = WeightTensor.to(self.Device)
-        self.Criterion = nn.CrossEntropyLoss(weight=self.ClassWeights)
+        self.LossFunction = str(Params.get("LossFunction", "cross_entropy")).lower()
+        if self.LossFunction == "focal":
+            Criterion: nn.Module = FocalLoss(self.ClassWeights)
+        else:
+            Criterion = nn.CrossEntropyLoss(weight=self.ClassWeights)
+        self.Criterion = Criterion
         ParamsList = [P for L in self.LstmLayers for P in L.parameters()]
         ParamsList += list(self.Classifier.parameters())
         self.Optimizer = torch.optim.Adam(ParamsList, lr=self.LearningRate)

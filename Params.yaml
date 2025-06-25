@@ -46,4 +46,5 @@ LSTMParams:
   HiddenSize: [16]
   DropoutRate: 0.1
   ModelPath: LSTMModel.pth
+  LossFunction: cross_entropy
 ScalerDictPath: ScalerDict.pkl

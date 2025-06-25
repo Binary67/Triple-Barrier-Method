@@ -138,3 +138,19 @@ def test_dropout_parameter() -> None:
     Model = LSTMModel(Data, Data, ["Feature"], "Label", Params)
     assert isinstance(Model.Dropout, torch.nn.Dropout)
     assert abs(Model.Dropout.p - 0.5) < 1e-6
+
+
+def test_focal_loss_selection() -> None:
+    Data = pd.DataFrame({"Feature": [0, 1, 2, 3], "Label": [0, 1, 0, 1]})
+    Params = {
+        "BatchSize": 1,
+        "LearningRate": 0.01,
+        "Epochs": 1,
+        "SequenceLength": 2,
+        "HiddenSize": [2],
+        "LossFunction": "focal",
+    }
+    Model = LSTMModel(Data, Data, ["Feature"], "Label", Params)
+    from LSTMModel import FocalLoss
+
+    assert isinstance(Model.Criterion, FocalLoss)
